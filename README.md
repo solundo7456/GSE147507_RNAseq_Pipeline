@@ -1,113 +1,172 @@
-# GSE147507_RNAseq_Pipeline
+RNA-Seq Analysis of SARS-CoV-2 Infection in Primary Human Lung Epithelium (NHBE)
 
-📌 RNA-seq Analysis of NHBE Cells – GSE147507
+This project analyzes RNA-sequencing data from GSE147507, focusing specifically on primary human bronchial epithelial (NHBE) cells under two conditions:
 
-This repository contains a full reproducible workflow for processing and analyzing RNA-seq data from Primary Human Lung Epithelium (NHBE) infected with SARS-CoV-2, IAV, and Mock controls.
-The dataset originates from the public study GSE147507.
+Mock-treated
 
-🧬 1. Project Overview
+SARS-CoV-2-infected (24 h)
 
-Goal:
-To perform quality control, trimming, quantification, and differential gene expression analysis for the NHBE samples only.
+The full workflow goes from raw FASTQ files → QC → trimming → alignment → transcript quantification → differential expression → pathway analysis (GO/KEGG).
 
-Conditions included:
+🔬 1. Data Acquisition
+1.1 Download metadata
 
-Mock
+Downloaded GSE147507 metadata from GEO.
 
-SARS-CoV-2 infection
+Filtered SraRunTable to include only NHBE samples.
 
-Influenza A Virus (IAV) infection
+Extracted Run accessions (SRR numbers) for downloading.
 
-Files produced:
+1.2 Download FASTQ files
+
+Used SRA-tools:
+
+prefetch SRRXXXXXX
+fasterq-dump SRRXXXXXX --split-files --outdir fastq/
+
+🧪 2. Quality Control
+2.1 FastQC (raw reads)
+
+Initial QC to inspect read quality:
+
+fastqc fastq/*.fastq -o qc/raw/
+
+2.2 fastp (trimming + QC)
+
+Used to:
+
+remove adapters
+
+trim low-quality bases
+
+generate HTML reports
+
+fastp \
+  -i sample.fastq \
+  -o trimmed/sample_trimmed.fastq \
+  -q 20 \
+  -t 1 \
+  -u 30 \
+  -h qc/sample_fastp.html \
+  -j qc/sample_fastp.json
+
+2.3 FastQC (post-trim)
+fastqc trimmed/*.fastq -o qc/trimmed/
+
+🧬 3. Reference Genome Setup
+3.1 Download reference (GRCh38 + GTF)
+
+Obtained from Ensembl or GENCODE.
+
+3.2 Build HISAT2 Index
+hisat2-build genome.fa hisat2_index/genome
+
+🧲 4. Alignment to the Genome
+
+Aligned cleaned FASTQ reads using HISAT2:
+hisat2 -p 8 \
+  -x hisat2_index/genome \
+  -U trimmed/${sample}_trimmed.fastq \
+  -S bam/${sample}.sam
+
+📦 5. BAM Processing (SAMtools)
+
+Converted, sorted, and indexed alignments:
+
+samtools view -bS bam/${sample}.sam > bam/${sample}.bam
+
+samtools sort bam/${sample}.bam -o bam/${sample}_sorted.bam
+
+samtools index bam/${sample}_sorted.bam
+
+🧫 6. Transcript Assembly & Quantification (StringTie)
+
+Used StringTie to compute transcript-level abundances.
+
+6.1 Quantification per sample
+stringtie sample_sorted.bam \
+  -G annotation.gtf \
+  -o stringtie/sample.gtf \
+  -A stringtie/gene_abund.tab \
+  -e -B
+
+
+gene_abund.tab → gene TPMs
+
+sample.gtf → transcript structures
+
+-B → Ballgown-compatible output
+
+6.2 Optional: Merge transcripts
+stringtie --merge -G annotation.gtf \
+  -o merged.gtf mergelist.txt
+
+6.3 Re-quantify using merged reference
+stringtie sample_sorted.bam \
+  -G merged.gtf -e -o sample_merged.gtf
+
+📊 7. Gene-Level Counting
+
+Although StringTie gives TPM/FPKM, differential expression requires raw counts.
+
+Used featureCounts:
+
+featureCounts -T 8 \
+  -a annotation.gtf \
+  -o gene_count_matrix.txt \
+  bam/*.bam
+
+
+Generated:
 
 gene_count_matrix.csv
 
-transcript_count_matrix.csv
+transcript_count_matrix.csv (from StringTie)
 
-Processed metadata file
+📈 8. Differential Expression Analysis (DESeq2)
+Load count matrix + metadata
+Run DESeq2
+Visualizations
 
-QC reports
+PCA plot
 
-R scripts for DESeq2 analysis
+Heatmaps
 
-🔽 3. Downloading the Data
-Using SRA Toolkit
-# Download all FASTQs from the run list
-cat SRR_Acc_List.txt | while read srr; do
-    fasterq-dump $srr -O fastq/ --split-files
-done
+Volcano plot
 
-Filtering NHBE samples
-grep -F -f nhbe_sra_list.txt SraRunTable.csv > metadata/SraRunTable_filtered.csv
+Sample distance plot
 
-🔧 4. Quality Control
-Run fastp
-fastp -i sample_1.fastq.gz -I sample_2.fastq.gz \
-      -o trimmed/sample_1.fq.gz -O trimmed/sample_2.fq.gz \
-      -h qc/sample_fastp.html
+8.4 DEG Export
+write.csv(res, "DEG_results.csv")
 
-🎯 5. Quantification (Salmon)
-Index building
-salmon index -t transcripts.fa -i salmon_index
+🧭 9. Functional & Pathway Analysis
 
-Run quantification
-salmon quant -i salmon_index -l A \
-             -1 trimmed/sample_1.fq.gz \
-             -2 trimmed/sample_2.fq.gz \
-             -p 8 -o counts/sample/
+Used R packages:
 
-📊 6. Create Count Matrices
+clusterProfiler
 
-After quantification:
+org.Hs.eg.db
 
-gene_count_matrix.csv
+enrichplot
 
-transcript_count_matrix.csv
+9.1 GO Enrichment
+9.2 KEGG Pathways
 
-Generated using:
+Identified:
 
-tximport(...)
+Antiviral response pathways
 
-📈 7. Differential Expression (DESeq2)
-Example R code:
-dds <- DESeqDataSetFromTximport(txi, metadata, ~ treatment)
-dds <- DESeq(dds)
-res <- results(dds, contrast = c("treatment", "SARSCoV2", "Mock"))
+Interferon signaling
+
+Cytokine signaling
+
+Pattern recognition receptor activation
 
 
-Outputs include:
 
-Normalized counts
+Reference:
+Genome Reference Consortium (2013). GRCh38 – Human genome assembly.
+Available at: https://www.ncbi.nlm.nih.gov/grc/human
 
-PCA plots
-
-Volcano plots
-
-DEG tables
-
-📦 8. Requirements
-Software
-
-SRA Toolkit
-
-fastp
-
-Salmon / Kallisto
-
-R (≥4.0)
-
-R packages:
-
-DESeq2
-
-tximport
-
-tidyverse
-
-pheatmap
-
-📝 9. Citation
-
-Please cite the original study when using this data:
-
-Blanco-Melo et al., Imbalanced host response to SARS-CoV-2 drives development of COVID-19. Cell (2020)
+Leinonen, R., Sugawara, H., Shumway, M. (2011). The Sequence Read Archive. Nucleic Acids Research, 39, D19–D21.
+https://doi.org/10.1093/nar/gkq1019
