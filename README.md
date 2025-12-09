@@ -8,7 +8,7 @@ SARS-CoV-2-infected (24 h)
 
 The full workflow goes from raw FASTQ files → QC → trimming → alignment → transcript quantification → differential expression → pathway analysis (GO/KEGG).
 
-🔬 1. Data Acquisition
+##🔬 1. Data Acquisition
 1.1 Download metadata
 
 Downloaded GSE147507 metadata from GEO.
@@ -24,7 +24,7 @@ Used SRA-tools:
 prefetch SRRXXXXXX
 fasterq-dump SRRXXXXXX --split-files --outdir fastq/
 
-🧪 2. Quality Control
+##🧪 2. Quality Control
 2.1 FastQC (raw reads)
 
 Initial QC to inspect read quality:
@@ -34,11 +34,8 @@ fastqc fastq/*.fastq -o qc/raw/
 2.2 fastp (trimming + QC)
 
 Used to:
-
 remove adapters
-
 trim low-quality bases
-
 generate HTML reports
 
 fastp \
@@ -53,7 +50,7 @@ fastp \
 2.3 FastQC (post-trim)
 fastqc trimmed/*.fastq -o qc/trimmed/
 
-🧬 3. Reference Genome Setup
+##🧬 3. Reference Genome Setup
 3.1 Download reference (GRCh38 + GTF)
 
 Obtained from Ensembl or GENCODE.
@@ -61,7 +58,7 @@ Obtained from Ensembl or GENCODE.
 3.2 Build HISAT2 Index
 hisat2-build genome.fa hisat2_index/genome
 
-🧲 4. Alignment to the Genome
+## 🧲 4. Alignment to the Genome
 
 Aligned cleaned FASTQ reads using HISAT2:
 hisat2 -p 8 \
@@ -69,17 +66,15 @@ hisat2 -p 8 \
   -U trimmed/${sample}_trimmed.fastq \
   -S bam/${sample}.sam
 
-📦 5. BAM Processing (SAMtools)
+## 📦 5. BAM Processing (SAMtools)
 
 Converted, sorted, and indexed alignments:
 
 samtools view -bS bam/${sample}.sam > bam/${sample}.bam
-
 samtools sort bam/${sample}.bam -o bam/${sample}_sorted.bam
-
 samtools index bam/${sample}_sorted.bam
 
-🧫 6. Transcript Assembly & Quantification (StringTie)
+## 🧫 6. Transcript Assembly & Quantification (StringTie)
 
 Used StringTie to compute transcript-level abundances.
 
@@ -105,7 +100,7 @@ stringtie --merge -G annotation.gtf \
 stringtie sample_sorted.bam \
   -G merged.gtf -e -o sample_merged.gtf
 
-📊 7. Gene-Level Counting
+## 📊 7. Gene-Level Counting
 
 Although StringTie gives TPM/FPKM, differential expression requires raw counts.
 
@@ -116,50 +111,32 @@ featureCounts -T 8 \
   -o gene_count_matrix.txt \
   bam/*.bam
 
-
 Generated:
-
 gene_count_matrix.csv
-
 transcript_count_matrix.csv (from StringTie)
 
-📈 8. Differential Expression Analysis (DESeq2)
+## 📈 8. Differential Expression Analysis (DESeq2)
 Load count matrix + metadata
 Run DESeq2
-Visualizations
-
-PCA plot
-
-Heatmaps
-
-Volcano plot
-
-Sample distance plot
+Visualizations, PCA plot, Heatmaps, Volcano plot, Sample distance plot
 
 8.4 DEG Export
 write.csv(res, "DEG_results.csv")
 
-🧭 9. Functional & Pathway Analysis
+## 🧭 9. Functional & Pathway Analysis
 
 Used R packages:
-
 clusterProfiler
-
 org.Hs.eg.db
 
 enrichplot
-
-9.1 GO Enrichment
-9.2 KEGG Pathways
+GO Enrichment
+KEGG Pathways
 
 Identified:
-
 Antiviral response pathways
-
 Interferon signaling
-
 Cytokine signaling
-
 Pattern recognition receptor activation
 
 
