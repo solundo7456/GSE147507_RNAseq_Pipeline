@@ -1,4 +1,4 @@
-RNA-Seq Analysis of SARS-CoV-2 Infection in Primary Human Lung Epithelium (NHBE)
+# RNA-Seq Analysis of SARS-CoV-2 Infection in Primary Human Lung Epithelium (NHBE)
 
 This project analyzes RNA-sequencing data from GSE147507, focusing specifically on primary human bronchial epithelial (NHBE) cells under two conditions:
 
