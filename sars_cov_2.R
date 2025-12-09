@@ -10,9 +10,7 @@ library(tibble)
 library(DESeq2)
 library(ggplot2)
 
-getwd()
-setwd('~/Downloads/bioinformatics/sars_cov_2/project_GSE147507/fastq')
-getwd()
+
 #creating table
 metadata = read.csv('metadata.csv')
 head(metadata)
