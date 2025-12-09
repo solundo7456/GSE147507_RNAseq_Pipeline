@@ -8,7 +8,7 @@ SARS-CoV-2-infected (24 h)
 
 The full workflow goes from raw FASTQ files → QC → trimming → alignment → transcript quantification → differential expression → pathway analysis (GO/KEGG).
 
-##🔬 1. Data Acquisition
+## 🔬 1. Data Acquisition
 1.1 Download metadata
 
 Downloaded GSE147507 metadata from GEO.
@@ -24,7 +24,7 @@ Used SRA-tools:
 prefetch SRRXXXXXX
 fasterq-dump SRRXXXXXX --split-files --outdir fastq/
 
-##🧪 2. Quality Control
+## 🧪 2. Quality Control
 2.1 FastQC (raw reads)
 
 Initial QC to inspect read quality:
@@ -50,7 +50,7 @@ fastp \
 2.3 FastQC (post-trim)
 fastqc trimmed/*.fastq -o qc/trimmed/
 
-##🧬 3. Reference Genome Setup
+## 🧬 3. Reference Genome Setup
 3.1 Download reference (GRCh38 + GTF)
 
 Obtained from Ensembl or GENCODE.
